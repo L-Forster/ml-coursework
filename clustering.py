@@ -240,17 +240,23 @@ rand_baseline_labels = np.random.randint(1, k + 1, size=len(X_sample))
 
 
 def calculate_error(labels):
-    error_count = 0
-    total_pairs = 0
-    for i in range(len(labels)):
-        for j in range(i + 1, len(labels)):
-            # for each calculated pair
-            if y_sample[i] == y_sample[j]:
-                total_pairs += 1
-                # if it's not a pair in the ground truths..
-                if labels[i] != labels[j]:
-                    error_count += 1
-
+    """
+    Optimized O(n) version using numpy.
+    Counts pairs that share same ground truth but are in different clusters.
+    """
+    # Total pairs where y_sample[i] == y_sample[j]: sum of C(n,2) per true class
+    _, true_counts = np.unique(y_sample, return_counts=True)
+    total_pairs = np.sum(true_counts * (true_counts - 1) // 2)
+    
+    # Correctly paired: same true label AND same predicted cluster
+    # Create combined keys and count unique (true, pred) pairs
+    combined = y_sample.astype(np.int64) * (labels.max() + 1) + labels
+    _, pair_counts = np.unique(combined, return_counts=True)
+    correctly_paired = np.sum(pair_counts * (pair_counts - 1) // 2)
+    
+    # Error = pairs that should be together (same truth) but aren't (diff cluster)
+    error_count = total_pairs - correctly_paired
+    
     return error_count, total_pairs
 
 # getting the best params and best labels..
